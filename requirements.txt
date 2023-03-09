@@ -1,0 +1,7 @@
+dvc[gdrive]
+numpy
+opencv-python
+openpyxl
+pandas
+pytesseract
+tqdm

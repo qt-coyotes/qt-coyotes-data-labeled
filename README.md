@@ -15,6 +15,18 @@ pip install -r requirements.txt
 
 A DVC remote is setup with Google Drive, to pull data use `dvc pull`.
 
+To push data,
+
+```bash
+dvc add data
+dvc commit
+git commit
+git add -A
+git commit -m "Add new dataset ..."
+git push
+dvc push
+```
+
 ## Format
 
 Will convert all metadata to

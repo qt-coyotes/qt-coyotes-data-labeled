@@ -1,10 +1,11 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import cv2
 import glob
 import json
 import os
 from tqdm import tqdm
 
-DUPLICATE_JSON_PATH = "data/processed/CHIL/duplicate_images.json"
+DUPLICATE_JSON_PATH = "data/processed/duplicate_images.json"
 GLOB_PATTERNS = [
     "data/raw/CHIL/**/*.jpg",
     "data/raw/CHIL/**/*.JPG",
@@ -12,30 +13,45 @@ GLOB_PATTERNS = [
     "data/raw/CHIL_earlier/**/*.JPG",
     "data/raw/mange_images/**/*.JPG",
     "data/raw/mange_images/**/*.jpg"
+    "data/raw/mange_Toronto/**/*.jpg"
 ]
+NUMBER_OF_THREADS = 64
 
 
-def identify_duplicate_images(filenames):
-    os.environ["PYTHONHASHSEED"] = "0"
-    hash_filenames = {}
-    for filename in tqdm(filenames):
-        image = cv2.imread(filename)
-        h = hash(image.data.tobytes())
-        if h in hash_filenames:
-            hash_filenames[h].append(filename)
-        else:
-            hash_filenames[h] = [filename]
-    duplicates = sorted(filter(
-        lambda filenames: len(filenames) > 1, hash_filenames.values()
-    ))
-    return duplicates
+def get_image_hash(filename):
+    image = cv2.imread(filename)
+    h = hash(image.data.tobytes())
+    return h, filename
 
 
 def main():
+    """
+    Sanity check that there are no images with the same hash in the datasets.
+    """
     filenames = []
     for glob_pattern in GLOB_PATTERNS:
         filenames.extend(glob.glob(glob_pattern, recursive=True))
-    duplicates = identify_duplicate_images(filenames)
+
+    os.environ["PYTHONHASHSEED"] = "0"
+    hash_filenames = {}
+
+    duplicates = []
+    with ThreadPoolExecutor(NUMBER_OF_THREADS) as executor:
+        futures = []
+        for filename in filenames:
+            future = executor.submit(get_image_hash, filename)
+            futures.append(future)
+
+        for future in tqdm(as_completed(futures), total=len(futures)):
+            hash, filename = future.result()
+            if hash in hash_filenames:
+                hash_filenames[hash].append(filename)
+            else:
+                hash_filenames[hash] = [filename]
+
+    duplicates = sorted(filter(
+        lambda filenames: len(filenames) > 1, hash_filenames.values()
+    ))
     with open(DUPLICATE_JSON_PATH, "w") as f:
         json.dump(duplicates, f, indent=4)
     print(f"Found {len(duplicates)} duplicate images.")

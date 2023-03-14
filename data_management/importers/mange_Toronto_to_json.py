@@ -9,28 +9,35 @@ import cv2
 import pandas as pd
 from tqdm import tqdm
 
-RAW_DATA_PATH = Path("data/raw/mange_images")
-CSV_PATH = RAW_DATA_PATH / "mange_metadata.csv"
-COCO_PATH = Path("data/processed/mange_images/mange_images.json")
-CONTRIBUTOR = "Mason Fidino"
+RAW_DATA_PATH = Path("data/raw/mange_Toronto")
+CSV_PATH = RAW_DATA_PATH / "coyotes_mange_data_19072022.csv"
+COCO_PATH = Path("data/processed/mange_Toronto/mange_Toronto.json")
+CONTRIBUTOR = "Tiziana Gelmi Candusso"
 EXTENDED_DESCRIPTION = """"""
 MAX_SEQUENCE_DELTA = timedelta(minutes=30)
+WIDTH_HEIGHT_TO_BAR_HEIGHT = {
+    (1024, 768): 62,
+    (1920, 1440): 96,
+    (4416, 3312): 197,
+    (4608, 3456): 144,
+    (4624, 3468): 256
+}
 
 DUPLICATE_FILE_NAMES = set()
 
 
 def get_category_id(row: pd.Series):
-    if row["Not_coyote"] == 1:
+    if row["Species"] != "coyote":
         category_id = 4
-    elif row["Mange_signs_present"] == 1:
+    elif row["mange"] is True:
         category_id = 1
-    elif row["Mange_signs_present"] == 0:
+    elif row["mange"] is False:
         category_id = 2
-    elif pd.isna(row["Mange_signs_present"]):
+    elif pd.isna(row["mange"]):
         category_id = 3
     else:
         raise Exception(
-            f"Unknown Mange_signs_present: {row['Mange_signs_present']}"
+            f"Unknown mange: {row['mange']}"
         )
     return category_id
 
@@ -39,7 +46,7 @@ def generate_image(row: pd.Series):
     corrupt = False
     width = None
     height = None
-    file_name = row["new_file_name"]
+    file_name = row["RelativePath"].replace('\\', '.') + "." + row["File"]
     photo_path = RAW_DATA_PATH / file_name
     try:
         img = cv2.imread(str(photo_path))
@@ -48,19 +55,17 @@ def generate_image(row: pd.Series):
         print(e)
         corrupt = True
 
-    td = pd.to_timedelta(row["time"])
-    dt = pd.to_datetime(row["date"])
-    dt += td
+    dt = pd.to_datetime(row["DateTime"])
     datetime_str = dt.isoformat(sep=" ", timespec="seconds")
 
     return {
         "id": str(uuid.uuid1()),
-        "file_name": row["new_file_name"],
+        "file_name": file_name,
         "width": width,
         "height": height,
         "rights_holder": CONTRIBUTOR,
         "datetime": datetime_str,
-        "location": row["Site"],
+        "location": row["RelativePath"],
         "corrupt": corrupt,
     }
 
@@ -70,55 +75,45 @@ def generate_annotation(row: pd.Series, image: dict):
 
     width, height = image["width"], image["height"]
 
+    if width is None or height is None:
+        bbox = None
+    else:
+        barheight = WIDTH_HEIGHT_TO_BAR_HEIGHT.get((width, height))
+        if barheight is None:
+            raise Exception(f"Unknown width, height: {width}, {height}")
+        else:
+            bbox = [0, 0, width, height - barheight]
+
     return {
         "id": str(uuid.uuid1()),
         "image_id": image["id"],
         "category_id": category_id,
-        "bbox": [0, 0, width, height - 100],
+        "bbox": bbox,
         "sequence_level_annotation": False,
 
-        "blur_match": row["blur.match"] if not pd.isna(row["blur.match"]) else None,
-        "blur_match_1": row["blur.match.1"] if not pd.isna(row["blur.match.1"]) else None,
-        "blur": float(row["blur.match.1"]) if not pd.isna(row["blur.match.1"]) else None,
-        "mange_potential_low_confidence": int(row["Mange_potential_low_confidence"])
-        if not pd.isna(row["Mange_potential_low_confidence"]) else 0,
-        "clear_photo": int(row["Clear.photo"])
-        if not pd.isna(row["Clear.photo"]) else None,
-        "blurry": int(row["Blurry"])
-        if not pd.isna(row["Blurry"])
-        else 0,
-        "lighting": int(row["Lighting"])
-        if not pd.isna(row["Lighting"])
-        else 0,
-        "too_far_away": int(row["Too_far_away"])
-        if not pd.isna(row["Too_far_away"])
-        else 0,
-        "in_color": int(row["In_color"])
-        if not pd.isna(row["In_color"])
+        "image_quality": row["ImageQuality"] if not pd.isna(row["ImageQuality"]) else None,
+        "delete_flag": row["DeleteFlag"] if not pd.isna(row["DeleteFlag"]) else None,
+        "n_species": float(row["Nspecies"]) if not pd.isna(row["Nspecies"]) else None,
+        "leash": row["leash"] if not pd.isna(row["leash"]) else None,
+        "melanistic": row["melanistic"] if not pd.isna(row["melanistic"]) else None,
+        "species_extra": row["SpeciesExtra"]
+        if not pd.isna(row["SpeciesExtra"])
         else None,
-        "whole_body": int(row["Whole_body"])
-        if not pd.isna(row["Whole_body"])
-        else 0,
-        "multiple_coyotes": int(row["Multiple_coyotes"])
-        if not pd.isna(row["Multiple_coyotes"])
-        else 0,
-        "notes": row["Notes"] if not pd.isna(row["Notes"]) else None,
-        "inspected": int(row["Inspected"]) if not pd.isna(row["Inspected"]) else 0,
-        "season": row["Season"] if not pd.isna(row["Season"]) else None,
-        "year": int(row["Year"]) if not pd.isna(row["Year"]) else None,
-        "propbodyvis": int(row["propbodyvis"])
-        if not pd.isna(row["propbodyvis"])
+        "UWIN": row["UWIN"]
+        if not pd.isna(row["UWIN"])
         else None,
-        "propbodyvismange": float(row["propbodyvismange"])
-        if not pd.isna(row["propbodyvismange"])
+        "spatiotemp_proj": row["spatiotemp_proj"]
+        if not pd.isna(row["spatiotemp_proj"])
         else None,
-        "sevaffarea": row["sevaffarea"] if not pd.isna(row["sevaffarea"]) else None,
-        "carterconfidence": row["carterconfidence"]
-        if not pd.isna(row["carterconfidence"]) else None,
-        "overallseverity": row["overallseverity"]
-        if not pd.isna(row["overallseverity"]) else None,
-        "maureenconfidence": row["maureenconfidence"]
-        if not pd.isna(row["maureenconfidence"]) else None
+        "conn_val": row["Conn_val"]
+        if not pd.isna(row["Conn_val"])
+        else None,
+        "speciesextraname": row["speciesextraname"]
+        if not pd.isna(row["speciesextraname"])
+        else None,
+        "revised": row["revised"] if not pd.isna(row["revised"]) else None,
+        "flagged": row["flagged"] if not pd.isna(row["flagged"]) else None,
+        "vehicles": row["vehicles"] if not pd.isna(row["vehicles"]) else None
     }
 
 
@@ -131,7 +126,7 @@ def generate_image_annotation(row: pd.Series):
 def generate_image_sequences(df: pd.DataFrame, images: List[dict]):
     file_name_to_image = {image["file_name"]: image for image in images}
 
-    df = df.sort_values(by=["Site", "new_file_name"])
+    df = df.sort_values(by=["RelativePath", "File"])
 
     prev_location_name = None
     prev_dt = None
@@ -139,9 +134,9 @@ def generate_image_sequences(df: pd.DataFrame, images: List[dict]):
     sequence = []
 
     for _, row in tqdm(df.iterrows(), total=len(df)):
-        file_name = row["new_file_name"]
+        file_name = row["RelativePath"].replace('\\', '.') + "." + row["File"]
         image = file_name_to_image[file_name]
-        location_name = row["Site"]
+        location_name = row["RelativePath"]
         try:
             dt = datetime.strptime(image["datetime"], "%Y-%m-%d %H:%M:%S")
         except ValueError:
@@ -210,10 +205,10 @@ def generate_categories():
 def main():
     df = pd.read_csv(CSV_PATH)
 
-    df = df.sort_values(by=["new_file_name", "Mange_signs_present"], ascending=[True, False])
-    df = df.drop_duplicates(subset=["new_file_name"])
+    df = df.sort_values(by=["RelativePath", "File", "mange"], ascending=[True, True, False])
+    df = df.drop_duplicates(subset=["RelativePath", "File"])
 
-    df = df[~df["new_file_name"].isin(DUPLICATE_FILE_NAMES)]
+    df = df[~df["RelativePath"].isin(DUPLICATE_FILE_NAMES)]
 
     images = []
     annotations = []
@@ -243,6 +238,7 @@ def main():
         "annotations": annotations,
     }
 
+    COCO_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(COCO_PATH, "w", encoding="utf-8") as f:
         json.dump(coco, f, indent=4)
 

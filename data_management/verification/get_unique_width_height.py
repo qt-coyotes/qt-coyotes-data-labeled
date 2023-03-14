@@ -1,13 +1,18 @@
+import argparse
 import json
 from pathlib import Path
 
 
-COCO_PATH = Path("data/processed/mange_Toronto/mange_Toronto.json")
-COCO_PATH = Path("data/processed/mange_images/mange_images.json")
-
-
 def main():
-    with open(COCO_PATH) as f:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "coco_path",
+        type=str,
+        help="Path to COCO JSON file.",
+    )
+    args = parser.parse_args()
+    coco_path = Path(args.coco_path)
+    with open(coco_path) as f:
         coco = json.load(f)
     images = coco['images']
     unique_w_h = set((i["width"], i["height"]) for i in images)

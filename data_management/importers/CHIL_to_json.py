@@ -30,7 +30,10 @@ severity	Mild < 25%, Moderate = 25 - 50%, Severe > 50%
 confidence	High, medium, low - subjective!
 flagged for follow up	1 indicates that coyote exhibits potential signs of mange but confidence is low because of angle, photo quality, ambiguous signs, etc."""
 MAX_SEQUENCE_DELTA = timedelta(minutes=30)
-
+WIDTH_HEIGHT_TO_BAR_HEIGHT = {
+    (2592, 1944): 200,
+    (3264, 2448): 100
+}
 DUPLICATE_FILE_NAMES = set([
     "VID3480-00002.jpg",
     "VID3480-00012.jpg",
@@ -169,11 +172,20 @@ def generate_annotation(row: pd.Series, image: dict):
         if pd.isna(row["Notes"]):
             row["Notes"] = row["good picture quality"]
 
+    if width is None or height is None:
+        bbox = None
+    else:
+        barheight = WIDTH_HEIGHT_TO_BAR_HEIGHT.get((width, height))
+        if barheight is None:
+            raise Exception(f"Unknown width, height: {width}, {height}")
+        else:
+            bbox = [0, 0, width, height - barheight]
+
     return {
         "id": str(uuid.uuid1()),
         "image_id": image["id"],
         "category_id": category_id,
-        "bbox": [0, 0, width, height - 198],
+        "bbox": bbox,
         "sequence_level_annotation": False,
         "city": row["City"] if not pd.isna(row["City"]) else None,
         "inspected": int(row["Inspected"])

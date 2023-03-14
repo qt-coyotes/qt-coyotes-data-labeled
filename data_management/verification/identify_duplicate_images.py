@@ -1,8 +1,9 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import cv2
 import glob
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import cv2
 from tqdm import tqdm
 
 DUPLICATE_JSON_PATH = "data/processed/duplicate_images.json"
@@ -12,8 +13,9 @@ GLOB_PATTERNS = [
     "data/raw/CHIL_earlier/**/*.jpg",
     "data/raw/CHIL_earlier/**/*.JPG",
     "data/raw/mange_images/**/*.JPG",
-    "data/raw/mange_images/**/*.jpg"
-    "data/raw/mange_Toronto/**/*.jpg"
+    "data/raw/mange_images/**/*.jpg",
+    "data/raw/mange_Toronto/**/*.jpg",
+    "data/raw/mange_Toronto/**/*.JPG"
 ]
 NUMBER_OF_THREADS = 64
 

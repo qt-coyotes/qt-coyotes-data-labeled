@@ -271,7 +271,7 @@ def generate_info(coco_path: Path):
     info = {
         "version": str(version),
         "year": 2020,
-        "description": "Chicago Urban Urban Wildlife Information Network Mange Dataset\n"
+        "description": "Chicago Urban Wildlife Information Network Mange Dataset\n"
         + EXTENDED_DESCRIPTION,
         "contributor": CONTRIBUTOR,
         "date_created": datetime.today().date().isoformat(),

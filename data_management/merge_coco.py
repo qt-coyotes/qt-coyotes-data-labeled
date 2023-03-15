@@ -10,7 +10,7 @@ REQUIRED_IMAGE_FIELDS = {
     "rights_holder",
     "datetime",
     "location",
-    # "corrupt",
+    "corrupt",
     "seq_id",
     "seq_num_frames",
     "frame_num",
@@ -31,7 +31,7 @@ MERGED_PATH = Path("data/processed/qt-coyotes-merged.json")
 COCO_FILES = [
     {
         "coco_path": "data/processed/CHIL/CHIL_uwin_mange_Marit_07242020.json",
-        "data_path": "data/raw/CHIL",
+        "data_path": "CHIL",
         "category_mapping": {
             1: 1,
             4: 1,
@@ -41,7 +41,7 @@ COCO_FILES = [
     },
     {
         "coco_path": "data/processed/CHIL-earlier/CHIL_earlier.json",
-        "data_path": "data/raw/CHIL-earlier",
+        "data_path": "CHIL-earlier",
         "category_mapping": {
             1: 1,
             2: 2,
@@ -49,7 +49,7 @@ COCO_FILES = [
     },
     {
         "coco_path": "data/processed/mange_images/mange_images.json",
-        "data_path": "data/raw/mange_images",
+        "data_path": "mange_images",
         "category_mapping": {
             1: 1,
             2: 2,
@@ -57,7 +57,7 @@ COCO_FILES = [
     },
     {
         "coco_path": "data/processed/mange_Toronto/mange_Toronto.json",
-        "data_path": "data/raw/mange_Toronto",
+        "data_path": "mange_Toronto",
         "category_mapping": {
             1: 1,
             2: 2,
@@ -111,6 +111,8 @@ def main():
             descriptions.append(coco["info"]["description"])
             versions.append(coco["info"]["version"])
             contributors.append(coco["info"]["contributor"])
+            data_path = Path(coco_file["data_path"])
+
             for image in coco["images"]:
                 image_id = image["id"]
                 if image_id in merged_coco["images"]:
@@ -118,7 +120,9 @@ def main():
                 for field in REQUIRED_IMAGE_FIELDS:
                     if field not in image:
                         raise ValueError(f"Missing field {field} in image {image_id}")
+                image["file_name"] = str(data_path / image["file_name"])
                 merged_coco["images"][image_id] = image
+
             for annotation in coco["annotations"]:
                 annotation_id = annotation["id"]
                 if annotation_id in merged_coco["annotations"]:

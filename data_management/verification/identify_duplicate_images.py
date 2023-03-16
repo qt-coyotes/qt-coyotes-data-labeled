@@ -8,14 +8,8 @@ from tqdm import tqdm
 
 DUPLICATE_JSON_PATH = "data/processed/duplicate_images.json"
 GLOB_PATTERNS = [
-    "data/raw/CHIL/**/*.jpg",
-    "data/raw/CHIL/**/*.JPG",
-    "data/raw/CHIL_earlier/**/*.jpg",
-    "data/raw/CHIL_earlier/**/*.JPG",
-    "data/raw/mange_images/**/*.JPG",
-    "data/raw/mange_images/**/*.jpg",
-    "data/raw/mange_Toronto/**/*.jpg",
-    "data/raw/mange_Toronto/**/*.JPG"
+    "data/raw/**/*.jpg",
+    "data/raw/**/*.JPG"
 ]
 NUMBER_OF_THREADS = 64
 

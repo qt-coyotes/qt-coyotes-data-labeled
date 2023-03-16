@@ -1,7 +1,7 @@
+import argparse
 import json
 import re
 import uuid
-import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -139,7 +139,7 @@ def generate_image_sequences(df: pd.DataFrame, images: List[dict]):
         image = file_name_to_image[row['File']]
         image["seq_id"] = seq_id
         image["seq_num_frames"] = seq_length
-        image["frame_num_in_seq"] = ord_in_seq
+        image["frame_num"] = ord_in_seq
 
     return images
 

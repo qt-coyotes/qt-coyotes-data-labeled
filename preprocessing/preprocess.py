@@ -21,6 +21,7 @@ def preprocess(
     image = cv2.imread(str(raw_image_path))
     bbox = annotation["bbox"]
     image = crop(image, *bbox)
+    processed_image_path.parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(processed_image_path), image)
 
 

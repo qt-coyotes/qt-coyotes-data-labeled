@@ -63,6 +63,158 @@ COCO_FILES = [
             2: 2,
         },
     },
+    {
+        "coco_path": "data/processed/coyote-dens/CumberlandA.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/CumberlandB.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/FalconerA.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/FalconerB.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/KinnardA.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/KinnardB.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/KinnardC.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/RowlandC.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/RowlandE.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/RowlandF.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/RowlandH.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/RowlandJ.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/RowlandK.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/RowlandL.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/RowlandN.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/StrathearnA.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/StrathearnB.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/WagnerB.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    },
+    {
+        "coco_path": "data/processed/coyote-dens/WagnerC.json",
+        "data_path": "coyote-dens",
+        "category_mapping": {
+            1: 1,
+            2: 2,
+        },
+    }
 ]
 
 
@@ -113,18 +265,25 @@ def main():
             contributors.append(coco["info"]["contributor"])
             data_path = Path(coco_file["data_path"])
 
+            image_id_to_image = {image["id"]: image for image in coco["images"]}
+
             for image in coco["images"]:
                 image_id = image["id"]
+                if image["corrupt"]:
+                    continue
                 if image_id in merged_coco["images"]:
                     raise ValueError(f"Duplicate image id {image_id}")
                 for field in REQUIRED_IMAGE_FIELDS:
                     if field not in image:
-                        raise ValueError(f"Missing field {field} in image {image_id}")
+                        print(f"Warning Missing field {field} in image {image_id} in {coco_file['coco_path']}")
+                        image[field] = None
                 image["file_name"] = str(data_path / image["file_name"])
                 merged_coco["images"][image_id] = image
 
             for annotation in coco["annotations"]:
                 annotation_id = annotation["id"]
+                if image_id_to_image[annotation["image_id"]]["corrupt"]:
+                    continue
                 if annotation_id in merged_coco["annotations"]:
                     raise ValueError(f"Duplicate annotation id {annotation_id}")
                 if annotation["category_id"] not in coco_file["category_mapping"]:

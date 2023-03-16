@@ -14,15 +14,15 @@ def main():
         "--categories_mange",
         type=int,
         nargs='+',
-        help="Category IDs for mange.",
-        required=True
+        default=[1],
+        help="Category IDs for mange."
     )
     parser.add_argument(
         "--categories_nomange",
         type=int,
         nargs='+',
-        help="Category IDs for nomange.",
-        required=True
+        default=[2],
+        help="Category IDs for nomange."
     )
     args = parser.parse_args()
     coco_path = Path(args.coco_path)

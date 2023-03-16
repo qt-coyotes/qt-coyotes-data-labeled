@@ -245,6 +245,7 @@ def generate_info(coco_path: Path, years, descriptions, versions, contributors):
 
 def main():
     merged_coco = {
+        "info": None,
         "categories": [
             {"id": 1, "name": "mange"},
             {"id": 2, "name": "no_mange"},
@@ -293,9 +294,12 @@ def main():
                         raise ValueError(
                             f"Missing field {field} in annotation {annotation_id}"
                         )
-                annotation["category_id"] = coco_file["category_mapping"][
-                    annotation["category_id"]
-                ]
+                if coco_file["data_path"] == "coyote-dens":
+                    annotation["category_id"] = 1 if annotation["is_mange"] else 2
+                else:
+                    annotation["category_id"] = coco_file["category_mapping"][
+                        annotation["category_id"]
+                    ]
                 merged_coco["annotations"][annotation_id] = annotation
 
     merged_coco["images"] = list(merged_coco["images"].values())

@@ -214,7 +214,7 @@ COCO_FILES = [
             1: 1,
             2: 2,
         },
-    }
+    },
 ]
 
 
@@ -276,8 +276,14 @@ def main():
                     raise ValueError(f"Duplicate image id {image_id}")
                 for field in REQUIRED_IMAGE_FIELDS:
                     if field not in image:
-                        print(f"Warning Missing field {field} in image {image_id} in {coco_file['coco_path']}")
+                        print(
+                            f"Warning Missing field {field} in image {image_id} in {coco_file['coco_path']}"
+                        )
                         image[field] = None
+
+                # hack: coyote-dens missing required field file_name
+                if image["file_name"] is None:
+                    image["file_name"] = image["file_path"]
                 image["file_name"] = str(data_path / image["file_name"])
                 merged_coco["images"][image_id] = image
 
@@ -287,15 +293,21 @@ def main():
                     continue
                 if annotation_id in merged_coco["annotations"]:
                     raise ValueError(f"Duplicate annotation id {annotation_id}")
-                if annotation["category_id"] not in coco_file["category_mapping"]:
+                if (
+                    annotation["category_id"]
+                    not in coco_file["category_mapping"]
+                ):
                     continue
                 for field in REQUIRED_ANNOTATION_FIELDS:
                     if field not in annotation:
-                        raise ValueError(
-                            f"Missing field {field} in annotation {annotation_id}"
+                        print(
+                            f"Missing field {field} in annotation {annotation_id} in {coco_file['coco_path']}"
                         )
+                        annotation[field] = None
                 if coco_file["data_path"] == "coyote-dens":
-                    annotation["category_id"] = 1 if annotation["is_mange"] else 2
+                    annotation["category_id"] = (
+                        1 if annotation["is_mange"] else 2
+                    )
                 else:
                     annotation["category_id"] = coco_file["category_mapping"][
                         annotation["category_id"]

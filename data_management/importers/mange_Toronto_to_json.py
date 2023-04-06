@@ -16,9 +16,9 @@ CONTRIBUTOR = "Tiziana Gelmi Candusso"
 EXTENDED_DESCRIPTION = """"""
 MAX_SEQUENCE_DELTA = timedelta(minutes=30)
 WIDTH_HEIGHT_TO_BAR_HEIGHT = {
-    (1024, 768): 62,
+    (1024, 768): 112,
     (1440, 1080): 67,
-    (1920, 1440): 96,
+    (1920, 1440): 197,
     (2048, 1536): 64,
     (3264, 2448): 102,
     (4416, 3312): 197,

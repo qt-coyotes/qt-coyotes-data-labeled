@@ -3,6 +3,8 @@ from pathlib import Path
 from tqdm import tqdm
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from datetime import datetime
+import pandas as pd
+
 
 LOCATION_TO_LATITUDE_LONGITUDE = {
     '39th st east': (41.824185267263125, -87.60883727116504),
@@ -189,25 +191,11 @@ LOCATION_TO_LATITUDE_LONGITUDE = {
     'TUW38b': (43.65915583951491, -79.38217792261688),
     'TUW39': (43.65915583951491, -79.38217792261688),
     'TUW4': (43.65915583951491, -79.38217792261688),
-    'TUW40\\Checkup 8 date wrong': (43.65915583951491, -79.38217792261688),
-    'TUW41\\Checkup 1': (43.65915583951491, -79.38217792261688),
-    'TUW41\\Checkup 12': (43.65915583951491, -79.38217792261688),
-    'TUW41\\Checkup 2': (43.65915583951491, -79.38217792261688),
-    'TUW41\\Checkup 3': (43.65915583951491, -79.38217792261688),
-    'TUW41\\Checkup 7': (43.65915583951491, -79.38217792261688),
-    'TUW41\\Checkup 9 wrong date': (43.65915583951491, -79.38217792261688),
     'TUW42': (43.65915583951491, -79.38217792261688),
     'TUW4b': (43.65915583951491, -79.38217792261688),
     'TUW5': (43.65915583951491, -79.38217792261688),
     'TUW6': (43.65915583951491, -79.38217792261688),
     'TUW7': (43.65915583951491, -79.38217792261688),
-    'TUWCPC_4\\check6_WW': (43.65915583951491, -79.38217792261688),
-    'TUWCPC_5\\Checkup 1': (43.65915583951491, -79.38217792261688),
-    'TUWCPC_5\\check2': (43.65915583951491, -79.38217792261688),
-    'TUWCPC_5\\check3': (43.65915583951491, -79.38217792261688),
-    'TUWCPC_5\\check4': (43.65915583951491, -79.38217792261688),
-    'TUWCPC_5\\check5': (43.65915583951491, -79.38217792261688),
-    'TUWCPC_6\\check2_WW': (43.65915583951491, -79.38217792261688),
     'VHC': (41.87771613132751, -87.6317137163225),
     'VLG': (41.87771613132751, -87.6317137163225),
     'VTW': (41.87771613132751, -87.6317137163225),
@@ -236,7 +224,7 @@ LOCATION_TO_LATITUDE_LONGITUDE = {
 }
 
 
-def add_tabular_features(image):
+def add_tabular_features(image, location_map):
     try:
         dt = datetime.strptime(image["datetime"], "%Y-%m-%d %H:%M:%S")
     except Exception:
@@ -252,8 +240,15 @@ def add_tabular_features(image):
 
     location = image["location"]
 
-    image["latitude"] = LOCATION_TO_LATITUDE_LONGITUDE[location][0]
-    image["longitude"] = LOCATION_TO_LATITUDE_LONGITUDE[location][1]
+    try:
+        latlong = location_map[location]
+    except KeyError:
+        try:
+            latlong = location_map[location.split("\\")[0]]
+        except KeyError:
+            latlong = location_map[location.split("\\")[0].replace("TUW", "")]
+
+    image["latitude"], image["longitude"] = latlong
 
     return image
 
@@ -266,11 +261,19 @@ def main():
 
     images_with_tabular_features = []
 
+    df = pd.read_csv(Path("data/raw/mange_Toronto/sites_XY2.csv"))
+
+    for _, row in df.iterrows():
+        site_name = row["site_name"]
+        latitude = row["Latitude"]
+        longitude = row["Longitude"]
+        LOCATION_TO_LATITUDE_LONGITUDE[site_name] = (latitude, longitude)
+
     with ProcessPoolExecutor() as executor:
         futures = []
         for image in images:
             future = executor.submit(
-                add_tabular_features, image
+                add_tabular_features, image, LOCATION_TO_LATITUDE_LONGITUDE
             )
             futures.append(future)
 

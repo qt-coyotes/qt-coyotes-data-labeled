@@ -1,28 +1,40 @@
 import argparse
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
-import numpy as np
-import cv2
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
-
-def crop(image: np.ndarray, x: float, y: float, w: float, h: float):
-    x = int(np.floor(x))
-    y = int(np.floor(y))
-    w = int(np.ceil(w))
-    h = int(np.ceil(h))
-    return image[y : y + h, x : x + w]
+import cv2 as cv
+import numpy as np
+from torchvision import transforms as T
+from torchvision.io import read_image
+from torchvision.transforms import functional as F
+from tqdm import tqdm
 
 
 def preprocess(
-    annotation: dict, raw_image_path: Path, processed_image_path: Path
+    annotation: dict,
+    raw_image_path: Path,
+    processed_image_path: Path,
+    crop_size: int,
 ):
-    image = cv2.imread(str(raw_image_path))
+    image = read_image(str(raw_image_path))
     bbox = annotation["bbox"]
-    image = crop(image, *bbox)
+    x, y, w, h = bbox
+    y = int(np.floor(y))
+    x = int(np.floor(x))
+    h = int(np.ceil(h))
+    w = int(np.ceil(w))
+    image = F.crop(image, y, x, h, w)
+    transform = T.Resize(
+        (crop_size, crop_size),
+        antialias=True,
+    )
+    image = transform(image)
     processed_image_path.parent.mkdir(parents=True, exist_ok=True)
-    cv2.imwrite(str(processed_image_path), image)
+    image = image.permute(1, 2, 0)
+    image = image.numpy()
+    image = cv.cvtColor(image, cv.COLOR_RGB2BGR)
+    cv.imwrite(str(processed_image_path), image)
 
 
 def main():
@@ -30,7 +42,8 @@ def main():
     parser.add_argument("coco_path", type=str)
     parser.add_argument("raw_data_path", type=str)
     parser.add_argument("processed_data_path", type=str)
-    parser.add_argument("--threads", default=64, required=False, type=str)
+    parser.add_argument("--processes", default=8, required=False, type=str)
+    parser.add_argument("--crop_size", default=224, required=False, type=str)
     args = parser.parse_args()
     coco_path = Path(args.coco_path)
     raw_data_path = Path(args.raw_data_path)
@@ -45,7 +58,7 @@ def main():
     annotations = coco["annotations"]
 
     # https://stackoverflow.com/questions/51601756/use-tqdm-with-concurrent-futures
-    with ThreadPoolExecutor(args.threads) as executor:
+    with ProcessPoolExecutor(args.processes) as executor:
         futures = []
         for annotation in annotations:
             image_id = annotation["image_id"]
@@ -54,7 +67,11 @@ def main():
             raw_image_path = raw_data_path / file_name
             processed_image_path = processed_data_path / file_name
             future = executor.submit(
-                preprocess, annotation, raw_image_path, processed_image_path
+                preprocess,
+                annotation,
+                raw_image_path,
+                processed_image_path,
+                args.crop_size,
             )
             futures.append(future)
 
@@ -62,5 +79,5 @@ def main():
             future.result()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

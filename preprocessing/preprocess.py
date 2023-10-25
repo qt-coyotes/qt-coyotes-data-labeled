@@ -9,6 +9,7 @@ from torchvision import transforms as T
 from torchvision.io import read_image
 from torchvision.transforms import functional as F
 from tqdm import tqdm
+from transforms import SquarePad
 
 
 def preprocess(
@@ -17,17 +18,24 @@ def preprocess(
     processed_image_path: Path,
     crop_size: int,
 ):
-    image = read_image(str(raw_image_path))
+    try:
+        image = read_image(str(raw_image_path))
+    except RuntimeError:
+        return
     bbox = annotation["bbox"]
     x, y, w, h = bbox
     y = int(np.floor(y))
     x = int(np.floor(x))
     h = int(np.ceil(h))
     w = int(np.ceil(w))
-    image = F.crop(image, y, x, h, w)
-    transform = T.Resize(
-        (crop_size, crop_size),
-        antialias=True,
+    transform = T.Compose(
+        [
+            SquarePad(),
+            T.Resize(
+                (crop_size, crop_size),
+                antialias=True,
+            )
+        ]
     )
     image = transform(image)
     processed_image_path.parent.mkdir(parents=True, exist_ok=True)
@@ -64,7 +72,7 @@ def main():
             image_id = annotation["image_id"]
             image = image_id_to_image[image_id]
             file_name = image["file_name"]
-            raw_image_path = raw_data_path / file_name
+            raw_image_path = raw_data_path / "megadetected" / file_name
             processed_image_path = processed_data_path / file_name
             future = executor.submit(
                 preprocess,
